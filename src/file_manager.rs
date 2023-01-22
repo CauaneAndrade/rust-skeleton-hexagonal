@@ -39,15 +39,16 @@ impl DiskEntry {
 
 impl FileManager {
     pub fn init(base_path: &Path) -> Result<Self> {
+        // Convert the input base path to an owned object
         let base_path = base_path.to_owned();
         if base_path.exists() {
-            return Err("folder already exists. try into another folder.".into());
+            return Err("Error: Folder already exists. Please choose a different location.".into());
         }
-
+    
+        // Create the specified directory and all necessary parent directories
         fs::create_dir_all(&base_path)?;
-        Ok(Self {
-            base_path,
-        })
+    
+        Ok(Self { base_path })
     }
 
     pub fn folder_exists(&self, target: &str) -> bool {
@@ -74,16 +75,18 @@ impl FileManager {
 
     pub fn create_file(path: &Path) -> Result<()> {
         if path.exists() {
-            return Err(format!("cannot create file {:?}, file already exists.", path).into())
+            return Err(format!("File {:?} already exists, cannot create duplicate file.", path).into())
         }
-
+        
+        // Get the parent directory of the file
         let parent_path = match path.parent() {
             Some(path) => path,
             None => {
-                return Err(format!("failed when trying to get parent of {:?}", path).into())
+                return Err(format!("Unable to determine parent directory of {:?} for file creation.", path).into())
             }
         };
 
+        // If the parent directory doesn't exist, create it
         if !parent_path.exists() {
             FileManager::create_folder(&parent_path)?;
         }
@@ -110,7 +113,7 @@ impl FileManager {
     }
 
     pub fn get_base_path(args: &AppArguments) -> Result<PathBuf> {
-        let mut base_path = match args.output() {
+        let base_path = match args.output() {
             Some(path) => Path::new(&path).to_path_buf(),
             None => env::current_dir()?
         };
@@ -121,7 +124,7 @@ impl FileManager {
     pub fn write_to_file(&self, target: &Path, buff: &[u8]) -> Result<()> {
         let target = self.base_path.join(&target);
         if !target.exists() {
-            return Err(format!("file {:?} doesnt exist.", &target).into());
+            return Err(format!("File {:?} does not exist.", &target).into());
         }
 
         let mut file = OpenOptions::new()

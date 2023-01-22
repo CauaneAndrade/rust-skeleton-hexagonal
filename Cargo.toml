@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.1.1", features = ["derive", "color", "default"] }
 lazy_static = "1.4.0"
+tempfile = "3.3.0"
