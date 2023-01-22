@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
-use lazy_static::lazy_static;
 use crate::args::AppArguments;
-use crate::file_manager::{FileManager, DiskEntry, DiskEntryType};
+use crate::file_manager::{DiskEntry, DiskEntryType, FileManager};
+use lazy_static::lazy_static;
+use std::path::{PathBuf};
 
 use crate::result::Result;
 
@@ -10,9 +10,7 @@ const CARGO_FILE_NAME: &str = "Cargo.toml";
 const MAIN_FILE_PATH: &str = "src";
 const MAIN_FILE_NAME: &str = "main.rs";
 
-/// This one is cool, you can initialize code in a static way
-/// I've created this FileRepresentation struct to better represent a file vs a folder
-/// I know that's over-engineering but it allows further extensions on the future.
+// Initialize code in a static way with lazy_static! macro for performance optimization
 lazy_static! {
     static ref FILES_TO_BE_CREATED: Vec<DiskEntry> = vec![
         DiskEntry::new("src/application", "mod.rs", DiskEntryType::File),
@@ -23,40 +21,37 @@ lazy_static! {
     ];
 }
 
-/// A tricky way of saving space on your format!(..) function :D
-/// There's probably better ways of doing that (like a static file or something)
-/// But if that's something that wont change much, i don't see much problem with it.
+/// A macro function for generating the main template string for a Rust program.
 macro_rules! main_template_str {
     () => {
-r#"fn main() {
-    println!("hello world");
+        r#"fn main() {
+    println!("Hello, world!");
 }"#
-    }
+    };
 }
 
-/// You can even set placeholders so format can replace them :D
+/// Using a macro allows for easy modification and maintenance of the Cargo.toml template string.
 macro_rules! cargo_template_str {
     () => {
-r#"[package]
+        r#"[package]
 name = "{}"
 version = "0.1.0"
 authors = ["Your Name"]
 description = "{}"#
-    }
+    };
 }
 
-
+// App struct is used to hold the arguments passed to the program.
 pub struct App {
     args: AppArguments,
 }
 
 impl App {
     pub fn new(args: &AppArguments) -> Self {
-        Self {
-            args: args.clone(),
-        }
+        Self { args: args.clone() }
     }
 
+    // Returns a Result type containing the base path of the project.
     pub fn run(&self) -> Result<PathBuf> {
         let base_path = FileManager::get_base_path(&self.args)?;
         let file_manager = FileManager::init(&base_path)?;
@@ -67,26 +62,54 @@ impl App {
         let cargo_file_contents = format!(
             cargo_template_str!(),
             self.args.project_name(),
-            self.args.details());
+            self.args.details()
+        );
 
-        let main_file = DiskEntry::new(
-            MAIN_FILE_PATH,
-            MAIN_FILE_NAME,
-            DiskEntryType::File);
+        let main_file = DiskEntry::new(MAIN_FILE_PATH, MAIN_FILE_NAME, DiskEntryType::File);
 
-        let cargo_file = DiskEntry::new(
-                  CARGO_FILE_PATH,
-                  CARGO_FILE_NAME,
-            DiskEntryType::File);
+        let cargo_file = DiskEntry::new(CARGO_FILE_PATH, CARGO_FILE_NAME, DiskEntryType::File);
 
-        file_manager.write_to_file(
-            &main_file.get_full_path(),
-            main_template_str!().as_bytes())?;
+        file_manager.write_to_file(&main_file.get_full_path(), main_template_str!().as_bytes())?;
 
-        file_manager.write_to_file(
-            &cargo_file.get_full_path(),
-            cargo_file_contents.as_bytes())?;
+        file_manager.write_to_file(&cargo_file.get_full_path(), cargo_file_contents.as_bytes())?;
 
         Ok(base_path)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use crate::args::AppArguments;
+
+    #[test]
+    fn test_app_run_success() {
+        let temp_dir = tempdir().unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        // let temp_path = temp_dir.path().join("test_project").to_path_buf();
+        let args = AppArguments::new("test_project", "test details", Some(temp_path.to_str().unwrap().to_owned()));
+        let app = App::new(&args);
+
+        let result = app.run();
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), temp_path.join("test_project"));
+    }
+
+    #[test]
+    fn test_app_run_fails_folder_exists() {
+        let temp_dir = tempdir().unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        let args = AppArguments::new("test_project", "test details", Some(temp_path.to_str().unwrap().to_owned()));
+        let app = App::new(&args);
+
+        let result = app.run();
+        let result2 = app.run();
+
+        assert!(result.is_ok());
+        assert!(result2.is_err());
+        assert_eq!(result2.unwrap_err().to_string(), "Error: Folder already exists. Please choose a different location.");
     }
 }

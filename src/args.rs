@@ -19,4 +19,12 @@ impl AppArguments {
     pub fn output(&self) -> Option<String> { self.output.clone() }
 
     pub fn project_name(&self) -> &str { &self.project_name }
+
+    pub fn new(project_name: &str, details: &str, output: Option<String>) -> Self {
+        Self {
+            project_name: project_name.to_owned(),
+            details: details.to_owned(),
+            output,
+        }
+    }
 }
