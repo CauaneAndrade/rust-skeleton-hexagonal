@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Debug, Clone, Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author = "Cauane Andrade", version, about, long_about = None)]
 pub struct AppArguments {
     #[clap(short, long = "project-name")]
     project_name: String,
